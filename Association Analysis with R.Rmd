@@ -1,0 +1,148 @@
+---
+title: "Associaion Rule with R"
+author: "Kelvin Kilel"
+date: "2/7/2022"
+output: html_document
+---
+
+# Research Question
+This section we will create association rules that will allow us to identify relationships between variables in the dataset. We are provided with a separate dataset that comprises groups of items that will be associated with others.
+
+
+# Reading the Dataset 
+
+```{r}
+# Loading the required libraries
+# install.packages("arules")
+library(arules)
+
+```
+
+```{r}
+# Loading the dataset
+link <- 'http://bit.ly/SupermarketDatasetII'
+Transactions <- read.transactions(link, sep = ",")
+```
+
+```{r}
+# Verifying the object's class
+# This should show us transactions as the type of data that we will need
+
+
+class(Transactions)
+
+```
+
+```{r}
+# Previewing our first 5 transactions
+#
+inspect(Transactions[1:5])
+
+```
+
+```{r}
+# Previewing the items that make up our dataset,
+
+items<-as.data.frame(itemLabels(Transactions))
+colnames(items) <- "Item"
+head(items, 10)   
+
+```
+
+```{r}
+# Generating a summary of the transaction dataset
+
+summary(Transactions)
+
+```
+
+Mineral water, eggs and spaghetti are the most purchased items.
+
+
+```{r}
+# Exploring the frequency of some articles
+itemFrequency(Transactions[, 1:10],type = "absolute")
+round(itemFrequency(Transactions[, 1:10],type = "relative")*100,2)
+
+```
+
+From most purchases in the store list, it contained almonds and avocado.
+
+```{r}
+# Producing a chart of frequencies and fitering to consider only items with a minimum percentage of support/ considering a top x of items
+# Displaying top 10 most common items in the transactions dataset and the items whose relative importance is at least 10%
+
+par(mfrow = c(1, 2))
+
+# plot the frequency of items
+itemFrequencyPlot(Transactions, topN = 10,col="darkgreen")
+itemFrequencyPlot(Transactions, support = 0.1,col="darkred")
+```
+
+```{r}
+# Building a model based on association rules using the apriori function 
+
+# We use Min Support as 0.001 and confidence as 0.8
+
+rules <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.8))
+rules
+
+```
+
+We built the model using 0.001 Min support and confidence as 0.8 we obtained 74 rules.
+
+# Challenging the model using 0.002 Min support and confidence as 0.8
+
+```{r}
+rules2 <- apriori (Transactions,parameter = list(supp = 0.002, conf = 0.8)) 
+
+rules2
+```
+
+We built the model using 0.002 Min support and confidence as 0.8 we obtained 2 rules.
+
+# Challenging the model using Min Support as 0.002 and confidence as 0.6
+
+```{r}
+# Building apriori model with Min Support as 0.002 and confidence as 0.6.
+rules3 <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.6)) 
+
+rules3
+
+```
+
+We built the model using 0.002 Min support and confidence as 0.6 we obtained 545 rules.
+
+In our first challenge, we increased the minimum support of 0.001 to 0.002 and model rules went from 74 to only 2. This would lead us to understand that using a high level of support can make the model lose interesting rules. In the second challenge, we decreased the minimum confidence level to 0.6 and the number of model rules went from 74 to 545. This would mean that using a low confidence level increases the number of rules to quite an extent and many will not be useful.
+
+# Perform an exploration of our model
+
+```{r}
+
+summary(rules)
+
+```
+
+# Observing rules built in our model i.e. first 5 model rules
+
+```{r}
+inspect(rules[1:5])
+
+```
+
+If a person buys frozen smoothie and spinach they are 89% likely to buy mineral water too.
+
+If a person buys mushroom cream sauce and pasta they are 95% likely to buy escalope.
+
+```{r}
+# Ordering these rules by a criteria such as the level of confidence then looking at the first five rules.
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+
+```
+
+The first four rules have a confidence of 100
+
+# Recomendations
+
+Carrefour Supermarket can use this model in arrangement of items such as have mushroom cream sauce, pasta and escalope in one lane.

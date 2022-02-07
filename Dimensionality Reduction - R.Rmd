@@ -1,0 +1,383 @@
+---
+title: "Dimensionality Reduction"
+author: "Kelvin Kilel"
+date: "2/4/2022"
+output: html_document
+---
+
+# Specifying the Question
+
+1. Dimensionality Reduction
+
+This section of the project entails reducing the dataset to a low dimensional dataset using PCA. You will be required to perform your analysis and provide insights gained from your analysis.
+
+2. Feature Selection
+
+This section requires you to perform feature selection through the use of the unsupervised learning methods. You will be required to perform your analysis and provide insights on the features that contribute the most information to the dataset.
+
+# Metrics od Success
+
+1. Be able to provide insights gained from dimensionality reduction using PCA.
+
+2. Be able to provide insights on the features that contribute most information to the dataset.
+
+# Experimental Design 
+
+1. Problem Definition.
+
+2. Reading the dataset.
+
+3. Perform EDA.
+
+4. Univariate Analysis.
+
+5. Bivariate Analysis.
+
+6. Dimensionality Reduction.
+
+7. Feature Selection.
+
+# Reading the Dataset
+
+```{r}
+library(data.table)
+library(tidyverse)
+
+link <- 'http://bit.ly/CarreFourDataset'
+carrefour_df <- read_csv(link)
+
+```
+
+```{r}
+# Previewing the top records
+head(carrefour_df)
+
+```
+
+```{r}
+# Checking the dimension of the dataset
+dim(carrefour_df)
+
+```
+
+```{r}
+# Checking the data types 
+str(carrefour_df)
+
+```
+
+```{r}
+# Checking for summary
+summary(carrefour_df)
+
+```
+# Tidying the dataset
+
+```{r}
+
+colSums(is.na(carrefour_df))
+
+# There are no missing values in the dataset.
+```
+
+```{r}
+# Converting to a dataframe
+new_df <- data.frame(carrefour_df)
+
+```
+
+```{r}
+# creating uniformity in the column names
+
+colnames(new_df) <- tolower(colnames(new_df))
+
+# Previwing the top records to confirm changes
+
+head(new_df)
+
+```
+
+```{r}
+# Checking for duplicates
+duplicates <- new_df[duplicated(new_df),]
+
+dim(duplicates)
+
+# There are no duplicates.
+```
+
+```{r}
+# Separating the numerical columns 
+num_cols <- subset(new_df, select = -c(
+invoice.id,branch,customer.type,gender,product.line,date,time,payment, gross.margin.percentage))
+
+head(num_cols)
+
+```
+
+```{r}
+# Checking for outliers 
+
+boxplot(num_cols)
+
+```
+
+# Univariate Analysis
+
+```{r}
+library(psych)
+
+describe(num_cols)
+
+```
+
+```{r}
+par(mfrow = c(2, 2))
+hist(num_cols$unit.price)
+hist(num_cols$quantity)
+hist(num_cols$tax)
+hist(num_cols$cogs)
+hist(num_cols$gross.income)
+hist(num_cols$rating)
+
+```
+The graphs above show that the attributes in our dataset do not have a normal distribution.
+
+Most quantity that were sold were single items.
+
+```{r}
+library(ggpubr)
+
+b <- ggplot(data = new_df) +
+  geom_bar(mapping = aes(x = branch))
+
+c <- ggplot(data = new_df) +
+  geom_bar(mapping = aes(x = customer.type))
+
+g <- ggplot(data = new_df) +
+  geom_bar(mapping = aes(x = gender))
+ggarrange(b, c, g + rremove("x.text"), 
+          ncol = 2, nrow = 2)
+
+```
+
+```{r}
+
+pr <- ggplot(data = new_df) +
+  geom_bar(mapping = aes(x = product.line))
+
+pa <- ggplot(data = new_df) +
+  geom_bar(mapping = aes(x = payment))
+ggarrange( pr, pa + rremove("x.text"), 
+          ncol = 2, nrow = 2)
+
+```
+All branches had almost equal sales. 
+
+Both members and normal customer types had equal contribution to the total sales.
+
+Both male and female had almost equal contribution to the total sales.
+
+Electronic accessories, Fashion accessories and food and beverages had high sales.
+
+# Bivariate Analysis
+
+```{r}
+
+new_df %>% 
+  ggplot() +
+  aes(x = branch, total = ..count../nrow(new_df), fill = total) +
+  geom_bar() +
+  ylab("relative frequency")
+
+```
+
+Branch A has slightly higher total sales.
+
+```{r}
+
+new_df %>% 
+  ggplot() +
+  aes(x = branch, total = ..count../nrow(new_df), fill = gender) +
+  geom_bar() +
+  ylab("relative frequency")
+```
+
+There were approximately equal number of male customers to female customers in each branch.
+
+```{r}
+new_df %>% 
+  ggplot() +
+  aes(x = branch, total = ..count../nrow(new_df), fill = customer.type) +
+  geom_bar() +
+  ylab("relative frequency")
+
+```
+
+Members and normal customer types had equal sales in each branch.
+
+```{r}
+
+new_df %>% 
+  ggplot() +
+  aes(x = branch, total = ..count../nrow(new_df), fill = product.line) +
+  geom_bar() +
+  ylab("relative frequency")
+
+```
+
+Branch C had less sale of sports and travel items compared to the other branches.
+Branch A had more sales on home and lifestyle items compared to the other branches. 
+
+```{r}
+
+library(corrplot)
+
+corrplot(cor(num_cols), type= 'upper', method = 'number', tl.cex = 0.9)
+```
+
+Tax and quantity are highly correlated positively.
+
+Gross income and tax, COGS and Tax, and COGS and Gross Income are perfectly correlated.
+
+# Dimensionality Reduction using PCA
+#### Feature Engineering
+
+```{r}
+# Dropping the columns that we will not require i.e date, time
+pca_df <- subset(new_df, select = -c(invoice.id, date, time, gross.margin.percentage))
+head(pca_df)
+
+```
+
+```{r}
+# Converting the categorical character columns to numericals
+## Converting to factors first
+pca_df$branch <- as.factor(pca_df$branch)
+pca_df$customer.type <- as.factor(pca_df$customer.type)
+pca_df$gender <- as.factor(pca_df$gender)
+pca_df$product.line <- as.factor(pca_df$product.line)
+pca_df$payment <- as.factor(pca_df$payment)
+
+## Converting to numerics
+pca_df$branch <- as.numeric(pca_df$branch)
+pca_df$customer.type <- as.numeric(pca_df$customer.type)
+pca_df$gender <- as.numeric(pca_df$gender)
+pca_df$product.line <- as.numeric(pca_df$product.line)
+pca_df$payment <- as.numeric(pca_df$payment)
+
+head(pca_df)
+```
+
+```{r}
+pca_df.pca <- prcomp(pca_df[, c(1:11)], centre = TRUE, scale. = TRUE)
+
+summary(pca_df.pca)
+
+```
+
+We have obtained 11 principal components, where each explains a percentate of the total variation of the dataset
+PC1 explains 35.7% of the total variance, PC2 explains 10.27% of the variance etc.
+
+```{r}
+# Calling str() to have a look at your PCA object
+str(pca_df.pca)
+
+```
+
+Here we have a look at the pca object: 
+  1. The center point ($center), scaling ($scale), standard deviation(sdev) of        each principal component. 
+  2. The relationship (correlation or anticorrelation, etc) between the initial       variables and the principal components ($rotation). 
+  3. The values of each sample in terms of the principal components.
+  
+```{r}
+# Plotting pca to get insights
+
+#install.packages("devtools")
+library(devtools)
+install_github("vqv/ggbiplot")
+
+# Then Loading ggbiplot library
+library(ggbiplot)
+
+ggbiplot(pca_df.pca)
+bplot = ggbiplot(pcobj = pca_df.pca,
+         choices = c(1,2),
+         obs.scale = 1, var.scale = 1,
+         varname.size = 5,
+         varname.abbrev = FALSE,
+         var.axes = TRUE,
+         circle = TRUE)
+print(bplot)
+
+```
+
+```{r}
+#install.packages("factoextra")
+library(factoextra)
+fviz_pca_var(pca_df.pca,
+             col.var = "contrib", # Color contribution to PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping
+            )
+```
+
+Our graphs show that PC1 contributes 35.8%.  Unit price, cogs, tax, gross income and quantity contribute to PC1.
+
+The rest of the variables have a minimal contribution to PC2.
+
+# Feature Selection using Filter Method
+
+```{r}
+library(caret)
+
+```
+
+```{r}
+# preapring our data 
+feat_df <- pca_df[-12]
+
+```
+
+```{r}
+# Calculating the correlation matrix
+CorrelationMatrix <- cor(feat_df)
+
+```
+
+```{r}
+# Find the attributes that are highly correlated
+highlycorrelated <- findCorrelation(CorrelationMatrix, cutoff=0.75)
+
+```
+
+```{r}
+# Highly Correlated Attributes
+
+names(feat_df[,highlycorrelated])
+
+```
+
+```{r}
+# Dropping the highly correlated attributes
+feat_df2 <- feat_df[-highlycorrelated]
+
+```
+
+```{r}
+# Performing Graphical Comparison
+par(mfrow = c(1, 2))
+corrplot(CorrelationMatrix, order = "hclust")
+corrplot(cor(feat_df2), order = "hclust")
+
+
+```
+
+```{r}
+# The important features for analysis are:
+names(feat_df2)
+```
+
+Conclusion
+
+The important features as branch, customer type, product line, unit price, quantity, payment method, gross income and rating.

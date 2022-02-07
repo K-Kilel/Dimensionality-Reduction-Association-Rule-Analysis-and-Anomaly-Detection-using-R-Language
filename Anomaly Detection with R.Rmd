@@ -1,0 +1,95 @@
+---
+title: "Anomaly Detection with R"
+author: "Kelvin Kilel"
+date: "2/7/2022"
+output: html_document
+---
+
+# Research Question
+
+I have been requested to check whether there are any anomalies in the given sales dataset. The objective of this task being fraud detection.
+
+# Reading our dataset
+
+```{r}
+# Loading the reduired Libraries
+
+library(tidyverse)
+library(anomalize)
+
+```
+
+```{r}
+# Loading our dataset
+link <- 'http://bit.ly/CarreFourSalesDataset'
+data <- read_csv(link)
+
+```
+
+```{r}
+# Previewing the top records
+
+head(data)
+
+```
+
+# Tidying the Dataset
+
+
+```{r}
+# Checking for missing values
+colSums(is.na(data))
+
+```
+
+```{r}
+# Converting the date column
+data$Date <- as.Date(data$Date, format = "%m/%d/%Y")
+
+```
+
+```{r}
+# Changing the dataset to tibble
+#data$Date <- as.Date(data$Date, format = "%m%d%Y")
+
+new_data <- as.tibble(data)
+
+```
+
+```{r}
+is_tibble(new_data)
+
+```
+
+```{r}
+# Aggregating sales to get daily records
+
+new_data.anomaly <- aggregate(new_data["Sales"], by=new_data["Date"],sum)
+head(new_data.anomaly)
+
+```
+
+# Anomaly Detection
+
+```{r}
+# Converting to tibble
+new_data.anomaly <- as.tibble(new_data.anomaly)
+is_tibble(new_data.anomaly)
+```
+
+```{r}
+anomaly.detect <- new_data.anomaly %>%
+  time_decompose(Sales, method = "stl", frequency = "auto", trend = "auto") %>%
+  anomalize(remainder, method = "gesd", alpha = 0.05, max_anoms = 0.2) %>%
+  plot_anomaly_decomposition()
+
+```
+
+```{r}
+anomaly.detect
+
+```
+
+# Conclusion
+
+There are anomalies as from the month of February. Carrefour Supermarket management should investigate why there are anomalies as from February.
