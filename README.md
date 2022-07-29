@@ -12,7 +12,7 @@ This section requires us to perform feature selection through the use of the uns
 
 ### Part 3: Association Rules
 
-This section will requires creation association rules that will allow you to identify relationships between variables in the dataset.
+This section requires creation association rules that will allow you to identify relationships between variables in the dataset.
 
 ### Part 4: Anomaly Detection
 
